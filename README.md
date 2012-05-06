@@ -18,8 +18,8 @@ Patterns without directory parts are evaluated recursively.
 
 Examples:  
 	`*.py`		recursively match all python files.  
-	foo/**/*.py recursively match all python files in the foo/ directory.  
-	./*.py		match all the python files in the current diretory.  
+	`foo/**/*.py` recursively match all python files in the foo/ directory.  
+	`./*.py`		match all the python files in the current diretory.  
 	`*/*.txt`	match all the text files in child directories.  
 
 ```python
