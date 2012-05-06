@@ -61,9 +61,9 @@ def test_empty():
 
 def test_glob():
 	cases = [
-		("*.py", ["zero.py"]),
+		("./*.py", ["zero.py"]),
 		("foo/*.py", ["foo/one.py"]),
-		("*", ["zero.py", "zero"]),
+		("*/*", ["foo/one.py", "foo/one"]),
 	]
 
 	for pattern, results in cases:
@@ -83,12 +83,53 @@ def test_exact():
 def test_recursive():
 	cases = (
 		("**/...", ["foo/bar/baz/..."]),
+		("*.py", ["zero.py", "foo/one.py", "foo/bar/two.py", "foo/bar/baz/three.py"]),
 		("**/*.py", ["foo/bar/baz/three.py", "foo/bar/two.py", "foo/one.py", "zero.py"]),
 		("**/baz/**/*.py", ["foo/bar/baz/three.py"]),
 	)
 
 	for pattern, results in cases:
 		yield check, pattern, results
+
+
+def check_multi((paths, expected)):
+	actual = sorted(paths)
+	eq_(sorted(expected), actual)
+
+
+def test_multi():
+	a = paths.Paths(root) \
+		.includes("./*.py") \
+		.includes("*/*.py")
+
+	b = paths.Paths(root) \
+		.includes("**/zero*") \
+		.includes("**/one*")
+
+	c = paths.Paths(root) \
+		.includes("**/*") \
+		.excludes("**/*.py") \
+		.excludes("**/baz/*")
+
+	d = paths.Paths(root) \
+		.includes("**/*.py") \
+		.excludes("**/foo/**/*") \
+		.includes("**/baz/**/*.py")
+
+	e = paths.Paths(root) \
+		.includes("**/*.py") \
+		.excludes("two.py", "three.py")
+
+	cases = (
+		(a, ["zero.py", "foo/one.py"]),
+		(b, ["zero.py", "zero", "foo/one.py", "foo/one"]),
+		(c, ["zero", "foo/one", "foo/bar/two"]),
+		(d, ["zero.py", "foo/bar/baz/three.py"]),
+		(e, ["zero.py", "foo/one.py"]),
+	)
+
+	for case in cases:
+		yield check_multi, case
 
 
 if __name__ == "__main__":

@@ -3,58 +3,102 @@ import os, os.path
 import re
 import sys
 
-__all__ = ["paths"]
 
-def walk(root):
-	for abs, dirs, files in os.walk(root):
-		prefix = abs[len(root):].lstrip(os.sep)
-		bits = prefix.split(os.sep) if prefix else []
+class Pattern(object):
+	def __init__(self, spec):
+		self.compiled = self.compile(spec)
 
-		for file in files:
-			yield "/".join(bits + [file])
+	def compile(self, spec):
+		parse = "".join(self.parse(spec))
+		regex = "^{0}$".format(parse)
+		return re.compile(regex)
+
+	def parse(self, pattern):
+		if not pattern:
+			raise StopIteration
+
+		bits = pattern.split("/")
+		dirs, file = bits[:-1], bits[-1]
+
+		for dir in dirs:
+			if dir == "**":
+				yield  "(|.+/)"
+
+			elif dir == "*":
+				yield "[^/]+/"
+
+			elif dir == ".":
+				yield ""
+
+			else:
+				yield re.escape(dir) + "/"
+
+		if not dirs:
+			yield "(|.+/)"
+
+		yield "[^/]*".join(re.escape(bit) for bit in file.split("*"))
+
+	def matches(self, path):
+		return self.compiled.match(path) is not None
 
 
-def parse(pattern):
-	if not pattern:
-		raise StopIteration
+class Paths(object):
+	def __init__(self, root):
+		self.root = root
+		self.filters = []
 
-	bits = pattern.split("/")
-	dirs, file = bits[:-1], bits[-1]
+	def includes(self, *patterns):
+		for pattern in patterns:
+			self.filters.append((Pattern(pattern), True))
+		return self
 
-	for dir in dirs:
-		if dir == "**":
-			yield  "(|.+/)"
+	def excludes(self, *patterns):
+		for pattern in patterns:
+			self.filters.append((Pattern(pattern), False))
+		return self
 
-		elif dir == "*":
-			yield "[^/]+/"
+	def __iter__(self):
+		for path in self.walk():
+			included = False
 
-		else:
-			yield re.escape(dir) + "/"
+			for pattern, inclusive in self.filters:
+				if pattern.matches(path):
+					included = inclusive
 
-	yield "[^/]*".join(re.escape(bit) for bit in file.split("*"))
+			if included:
+				yield path
 
+	def walk(self):
+		for abs, dirs, files in os.walk(self.root):
+			prefix = abs[len(self.root):].lstrip(os.sep)
+			bits = prefix.split(os.sep) if prefix else []
 
-def compile(spec):
-	regex = "^{0}$".format("".join(parse(spec)))
-	return re.compile(regex)
+			for file in files:
+				yield "/".join(bits + [file])
 
 
 def paths(root, pattern):
 	"""
 		Ant style file matching.
 
-		Produces an iterator of all of the files that match the provided pattern.
+		Produces an iterator of all of the files that match the provided pattern.  
 
-		**	matches zero or more directories.
-		*	matches any directory name or acts as a glob style wildcard.
-		/	path separator.
+		Directory specifiers:  
+		**		matches zero or more directories.  
+		*		matches any directory name.  
+		/		path separator.  
+		.		matches current directory.
+
+		File specifiers:
+		*		glob style wildcard.
+
+		Patterns without directory parts are evaluated recursively.
 
 		Examples:
-			**/*.py		recursively match all python files.
-			*/*.txt		match all the text files in child directories.	
+			*.py		recursively match all python files.  
+			foo/**/*.py recursively match all python files in the foo/ directory.
+			./*.py		match all the python files in the current diretory.
+			*/*.txt		match all the text files in child directories.  
 	"""
 
-	return itertools.ifilter(
-		compile(pattern).match,
-		walk(root)
-	)
+	return Paths(root).includes(pattern)
