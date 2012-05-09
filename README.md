@@ -11,7 +11,7 @@ Directory specifiers:
 `/`		path separator.  
 `.`		matches current directory.
 
-File specifiers:
+File specifiers:  
 `*`		glob style wildcard.
 
 Patterns without directory parts are evaluated recursively.
