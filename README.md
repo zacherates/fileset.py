@@ -1,5 +1,5 @@
-paths.py
-========
+fileset.py
+==========
 
 Ant style file matching.
 
@@ -17,15 +17,13 @@ File specifiers:
 Patterns without directory parts are evaluated recursively.
 
 Examples:  
-	`*.py`		recursively match all python files.  
-	`foo/**/*.py` recursively match all python files in the foo/ directory.  
-	`./*.py`		match all the python files in the current diretory.  
-	`*/*.txt`	match all the text files in child directories.  
+	`**/*.py`		recursively match all python files.  
+	`foo/**/*.py`	recursively match all python files in the foo/ directory.  
+	`*.py`			match all the python files in the current diretory.  
+	`*/*.txt`		match all the text files in child directories.  
 
 ```python
->>> import paths
->>> list(paths.paths(".", "*.py"))
-['example.py', 'paths/paths.py', 'paths/test_paths.py']
->>> list(paths.paths(".", "./*.py"))
-['example.py']
+>>> from fileset import *
+>>> list(Fileset(".", [includes("*.py")]))
+['fileset.py', 'test_fileset.py']
 ```

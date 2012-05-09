@@ -9,7 +9,7 @@ from nose.tools import *
 
 from paver.easy import path
 
-import paths
+from fileset import *
 
 def setup():
 	global root
@@ -42,9 +42,11 @@ def teardown():
 	shutil.rmtree(root)
 
 def check(pattern, expected):
-	actual = sorted(paths.paths(root, pattern))
+	actual = sorted(Fileset(root, [includes(pattern)]))
 	eq_(sorted(expected), actual)
 
+
+ALL_THE_PIES = ["zero.py", "foo/one.py", "foo/bar/two.py", "foo/bar/baz/three.py"]
 
 def test_empty():
 	cases = (
@@ -61,9 +63,10 @@ def test_empty():
 
 def test_glob():
 	cases = [
-		("./*.py", ["zero.py"]),
+		("*.py", ["zero.py"]),
 		("foo/*.py", ["foo/one.py"]),
 		("*/*", ["foo/one.py", "foo/one"]),
+		("**/*a*/**/*.py", ["foo/bar/two.py", "foo/bar/baz/three.py"])
 	]
 
 	for pattern, results in cases:
@@ -83,8 +86,7 @@ def test_exact():
 def test_recursive():
 	cases = (
 		("**/...", ["foo/bar/baz/..."]),
-		("*.py", ["zero.py", "foo/one.py", "foo/bar/two.py", "foo/bar/baz/three.py"]),
-		("**/*.py", ["foo/bar/baz/three.py", "foo/bar/two.py", "foo/one.py", "zero.py"]),
+		("**/*.py", ALL_THE_PIES),
 		("**/baz/**/*.py", ["foo/bar/baz/three.py"]),
 	)
 
@@ -98,27 +100,33 @@ def check_multi((paths, expected)):
 
 
 def test_multi():
-	a = paths.Paths(root) \
-		.includes("./*.py") \
-		.includes("*/*.py")
+	a = Fileset(root, [
+		includes("*.py"),
+		includes("*/*.py"),
+	])
 
-	b = paths.Paths(root) \
-		.includes("**/zero*") \
-		.includes("**/one*")
+	b = Fileset(root, [
+		includes("**/zero*"),
+		includes("**/one*"),
+	])
 
-	c = paths.Paths(root) \
-		.includes("**/*") \
-		.excludes("**/*.py") \
-		.excludes("**/baz/*")
+	c = Fileset(root, [
+		includes("**/*"),
+		excludes("**/*.py"),
+		excludes("**/baz/*"),
+	])
 
-	d = paths.Paths(root) \
-		.includes("**/*.py") \
-		.excludes("**/foo/**/*") \
-		.includes("**/baz/**/*.py")
+	d = Fileset(root, [
+		includes("**/*.py"),
+		excludes("**/foo/**/*"),
+		includes("**/baz/**/*.py"),
+	])
 
-	e = paths.Paths(root) \
-		.includes("**/*.py") \
-		.excludes("two.py", "three.py")
+	e = Fileset(root, [
+		includes("**/*.py"),
+		excludes("**/two.py"),
+		excludes("**/three.py"),
+	])
 
 	cases = (
 		(a, ["zero.py", "foo/one.py"]),
@@ -126,6 +134,32 @@ def test_multi():
 		(c, ["zero", "foo/one", "foo/bar/two"]),
 		(d, ["zero.py", "foo/bar/baz/three.py"]),
 		(e, ["zero.py", "foo/one.py"]),
+	)
+
+	for case in cases:
+		yield check_multi, case
+
+def test_set():
+	a = Fileset(root, [
+		includes("**/*.py")
+	])
+
+	b = Fileset(root, [
+		includes("**/*"),
+		excludes("**/bar/**/*"),
+	])
+
+	c = Fileset(root, [])
+
+
+	cases = (
+		(a | b, ALL_THE_PIES + ["zero", "foo/one"]),
+		(a & b, ["zero.py", "foo/one.py"]),
+		(a | c, a),
+		(a & c, []),
+		(a | b | c, ALL_THE_PIES + ["zero", "foo/one"]),
+		((a | b) & c, []),
+		(a & b & c, []),
 	)
 
 	for case in cases:
