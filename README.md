@@ -9,12 +9,9 @@ Directory specifiers:
 `**`	matches zero or more directories.  
 `*`		matches any directory name.  
 `/`		path separator.  
-`.`		matches current directory.
 
 File specifiers:  
 `*`		glob style wildcard.
-
-Patterns without directory parts are evaluated recursively.
 
 Examples:  
 	`**/*.py`		recursively match all python files.  
